@@ -1,0 +1,9 @@
+{
+  "workspace_dir": "~/LocalDocuments/lazyhuman-workspace",
+  "local_inbox_dir": "~/LocalDocuments/lazyhuman-inbox",
+  "gmail_address": "mohtamadhukar+lh@gmail.com",
+  "labels": {
+    "inbox": "lazyhuman/inbox",
+    "processed": "lazyhuman/processed"
+  }
+}
