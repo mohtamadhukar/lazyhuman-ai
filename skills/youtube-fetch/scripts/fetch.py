@@ -4,11 +4,97 @@
 import argparse
 import json
 import os
+import ssl
 import sys
 import tempfile
+from pathlib import Path
 
-import yt_dlp
-from youtube_transcript_api import YouTubeTranscriptApi
+
+def _detect_ca_bundle() -> str | None:
+    for var in ("LAZYHUMAN_CA_BUNDLE", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE"):
+        v = os.environ.get(var)
+        if v and Path(v).is_file():
+            return v
+    default = Path.home() / ".certs" / "combined-ca-bundle.pem"
+    if default.is_file():
+        return str(default)
+    return None
+
+
+def _install_relaxed_tls() -> str | None:
+    """Support corporate MITM proxies (Zscaler etc.) whose intermediate CAs
+    mark BasicConstraints as non-critical — rejected by Python 3.12+'s
+    default ``VERIFY_X509_STRICT``. When a trust bundle is available, load
+    it and drop the strict flag for SSL contexts created via the stdlib
+    and urllib3. No-op when no bundle is found.
+    """
+    bundle = _detect_ca_bundle()
+    if not bundle:
+        return None
+
+    os.environ.setdefault("REQUESTS_CA_BUNDLE", bundle)
+    os.environ.setdefault("SSL_CERT_FILE", bundle)
+
+    _orig_default = ssl.create_default_context
+
+    def _patched_default(*args, **kwargs):
+        # Force our bundle if caller didn't supply any explicit trust source.
+        if not any(kwargs.get(k) for k in ("cafile", "capath", "cadata")):
+            kwargs["cafile"] = bundle
+            kwargs.pop("capath", None)
+            kwargs.pop("cadata", None)
+        ctx = _orig_default(*args, **kwargs)
+        ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        return ctx
+
+    ssl.create_default_context = _patched_default
+    ssl._create_default_https_context = _patched_default
+
+    try:
+        import urllib3.util.ssl_ as _u3ssl
+
+        _orig_u3 = _u3ssl.create_urllib3_context
+
+        def _patched_u3(*args, **kwargs):
+            ctx = _orig_u3(*args, **kwargs)
+            ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+            try:
+                ctx.load_verify_locations(cafile=bundle)
+            except Exception:
+                pass
+            return ctx
+
+        _u3ssl.create_urllib3_context = _patched_u3
+        # Submodules (notably urllib3.connection) import create_urllib3_context
+        # by name at load time, so they keep a direct reference to the original.
+        # Patch every already-imported module that has one.
+        for _mod in list(sys.modules.values()):
+            if _mod is None:
+                continue
+            mod_name = getattr(_mod, "__name__", "")
+            if not mod_name.startswith("urllib3"):
+                continue
+            if getattr(_mod, "create_urllib3_context", None) is _orig_u3:
+                _mod.create_urllib3_context = _patched_u3
+    except ImportError:
+        pass
+
+    # yt-dlp builds a raw SSLContext and loads certifi.where() into it.
+    # Redirect that to our bundle so the corporate CA chain is trusted.
+    try:
+        import certifi
+
+        certifi.where = lambda: bundle  # type: ignore[assignment]
+    except ImportError:
+        pass
+
+    return bundle
+
+
+_install_relaxed_tls()
+
+import yt_dlp  # noqa: E402
+from youtube_transcript_api import YouTubeTranscriptApi  # noqa: E402
 
 
 LANGUAGE_VARIANTS = {

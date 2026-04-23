@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m scripts.drain_gmail)",
+      "Bash(python3 -m scripts.file_item *)",
+      "Bash(python3 -m scripts.sync_push *)",
+      "Bash(python3 -m scripts.digest)"
+    ]
+  }
+}

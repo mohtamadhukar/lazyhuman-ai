@@ -36,6 +36,12 @@ from scripts._lib.gmail_client import fetch_rfc822, imap_session, list_uids
 from scripts._lib.workspace import ensure_workspace
 
 JSON_BLOCK = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
+QUOTE_PREFIX = re.compile(r"(?m)^\s*>+\s?")
+
+
+def _strip_quote_markers(text: str) -> str:
+    """Remove leading `> ` quote markers (Apple Mail share sheet, reply quotes)."""
+    return QUOTE_PREFIX.sub("", text)
 
 UNRELIABLE_URL_HOSTS = {
     "instagram.com",
@@ -47,6 +53,8 @@ UNRELIABLE_URL_HOSTS = {
 
 def _parse_meta(text_body: str) -> dict:
     m = JSON_BLOCK.search(text_body)
+    if not m:
+        m = JSON_BLOCK.search(_strip_quote_markers(text_body))
     if not m:
         raise ValueError("no ```json meta block found in email body")
     return json.loads(m.group(1))

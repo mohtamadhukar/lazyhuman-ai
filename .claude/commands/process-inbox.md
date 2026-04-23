@@ -73,6 +73,12 @@ For each entry in the drain manifest:
      `- [<name>](https://maps.app.goo.gl/?q=<url-encoded name>) — <notes>`.
    - Tasks: `- [ ] <task>`.
    - Freeform notes: plain markdown under the relevant heading.
+   - **YouTube captures MUST produce a per-video file containing (a) a
+     header with title/channel/URL/duration, (b) a short "Key takeaways"
+     section, and (c) the full transcript embedded inline as timestamped
+     paragraph chunks of ~30 seconds each. Never discard the transcript.
+     Before choosing the parent folder, confirm the categorization with
+     the user (e.g. "liked & already watched" vs "watch later").**
 
 5. **Append the visible source line** directly below the inserted section, as
    italic markdown:
