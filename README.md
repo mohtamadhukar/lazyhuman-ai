@@ -1,6 +1,6 @@
 # lazyhuman-ai
 
-Claude Code plugin that turns an iOS Share-Sheet Shortcut into a structured Markdown workspace, with optional push to Apple Notes.
+Claude Code project-scoped command workspace that turns an iOS Share-Sheet Shortcut into a structured Markdown workspace, with optional push to Apple Notes.
 
 ## How it works
 
@@ -29,8 +29,7 @@ Claude Code plugin that turns an iOS Share-Sheet Shortcut into a structured Mark
 ## Layout
 
 ```
-.claude-plugin/plugin.json     plugin manifest
-commands/                      slash-command prompts
+.claude/commands/              slash-command prompts (auto-loaded by Claude Code when CWD is this repo)
 scripts/                       drain, file, sync, digest
 scripts/_lib/                  config, Gmail client, frontmatter, sync adapters
 skills/youtube-fetch/          vendored from agentic-systems
