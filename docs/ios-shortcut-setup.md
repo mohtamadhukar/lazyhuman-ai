@@ -101,19 +101,22 @@ iOS Shortcuts doesn't natively emit hex; we use a 4-digit decimal suffix instead
 
 ### 5. Set `kind` to "auto" and extract `source_url`
 
-**Design change from original plan.** iOS Shortcuts' type-extraction actions (`Get URLs from Input`, `Get Images from Input`, etc.) are unreliable across iOS versions and Share Sheet sources — especially for composite items like Instagram reels. Instead of detecting `kind` in the Shortcut, we punt it to the Mac-side processor, which can inspect the email attachment's MIME type and infer `kind` with 100% accuracy.
+**Design note.** We don't detect `kind` inside the Shortcut — iOS type detection is unreliable across Share Sheet sources (e.g. Instagram reels), so we punt `kind` to the Mac-side processor, which inspects the email attachment's MIME. For `source_url` though, we do need to isolate a clean URL on the iOS side: rich Share Sheet payloads (Safari on YouTube, article reader selections, etc.) coerce to `<URL>\n<page text>`, and passing that blob straight into `source_url` dumps the whole transcript/page text into the field.
 
-The Shortcut's only job for these fields: hard-code `kind: "auto"` and do a dumb "contains http" check for `source_url`.
+The Shortcut's job for these fields: hard-code `kind: "auto"` and use **Get URLs from Input** to pull the first URL out of whatever the Share Sheet handed us.
 
 11. **Text** → content: `auto`. **Set Variable** → Name = `KIND`, input = that Text.
-12. **Text** → content: just the **Shortcut Input** variable pill. **Set Variable** → Name = `URL_CAND`.
-13. **If** → Input = **URL_CAND**; Condition = **starts with**; Value = `http`.
+12. **Get URLs from Input** → Input = **Shortcut Input**. Then **Get Item from List** → List = **URLs** (output of the previous action), Get = **First Item**. Then **Set Variable** → Name = `URL_CAND`, input = **List Item**.
+
+    _(Get URLs from Input scans the payload for URL-shaped tokens. For pure URL shares it returns the URL; for composite shares like YouTube-in-Safari it still returns just the URL and drops the page text; for text/image/PDF shares it returns an empty list, which makes `URL_CAND` empty.)_
+
+13. **If** → Input = **URL_CAND**; Condition = **has any value**.
     - **Inside If**: **Set Variable** → Name = `SOURCE_URL`, input = **URL_CAND**.
     - **Inside Otherwise**: **Text** (empty content) → **Set Variable** → Name = `SOURCE_URL`, input = that empty Text.
 
-    _(Matches both `http://` and `https://`, no false positives from hints that merely mention the word "http".)_
+    _(When the Share Sheet payload has no URL, `URL_CAND` is empty and `SOURCE_URL` stays empty — the processor routes the capture by attachment MIME instead.)_
 
-    **Note:** URL shares from rich sources (Safari, Instagram, YouTube) carry extra attachments — preview images, favicons, page content. The Shortcut sends these through as-is; `drain_gmail.py` filters them server-side. See PLAN Phase 2 Step 2.3 for the filter logic.
+    **Note:** URL shares from rich sources (Safari, Instagram, YouTube) carry extra attachments — preview images, favicons, page content. The Shortcut sends those attachments through as-is; `drain_gmail.py` filters them server-side. See PLAN Phase 2 Step 2.3 for the filter logic.
 
 No `Get URLs from Input`, no `Get Images from Input`, no nested list handling. The processor handles type inference from the MIME side.
 
