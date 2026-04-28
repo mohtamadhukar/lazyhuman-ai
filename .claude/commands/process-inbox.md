@@ -54,9 +54,10 @@ For each entry in the drain manifest:
 
    | kind                     | handler                                                                 |
    |--------------------------|-------------------------------------------------------------------------|
-   | `url` + youtube domain   | `python3 skills/youtube-fetch/scripts/fetch.py "<url>"` (Bash, JSON out) |
-   | `url` + instagram/tiktok | add to inline triage: "re-capture as screenshot"                        |
-   | `url` (other)            | `WebFetch` the URL with an extraction prompt                            |
+   | `url` + youtube domain   | `python3 skills/youtube-fetch/scripts/fetch.py "<url>"` (Bash, JSON out)     |
+   | `url` + instagram domain | `python3 skills/instagram-fetch/scripts/fetch.py "<url>"` (Bash, JSON out)  |
+   | `url` + tiktok domain    | add to inline triage: "re-capture as screenshot"                            |
+   | `url` (other)            | `WebFetch` the URL with an extraction prompt                                |
    | `pdf`                    | `python3 skills/pdf-to-markdown/scripts/convert.py "<payload>"` (Bash)  |
    | `image` / `screenshot`   | Read the image path directly                                            |
    | `text`                   | use the body verbatim                                                   |
@@ -79,6 +80,15 @@ For each entry in the drain manifest:
      paragraph chunks of ~30 seconds each. Never discard the transcript.
      Before choosing the parent folder, confirm the categorization with
      the user (e.g. "liked & already watched" vs "watch later").**
+   - **Instagram captures MUST produce a per-video file containing (a) a
+     header with author handle / caption first line / URL / duration, (b)
+     the full caption verbatim under a "Caption" subhead, (c) a short
+     "Key takeaways" section, and (d) the full transcript embedded inline
+     as timestamped paragraph chunks of ~30 seconds each. Image-only
+     carousel posts (where `instagram-fetch` returns `error: "no video
+     track"`) file the caption only and skip the transcript section.
+     Confirm the parent folder with the user before writing (e.g.
+     recipes vs travel vs fashion).**
 
 5. **Append the visible source line** directly below the inserted section, as
    italic markdown:
